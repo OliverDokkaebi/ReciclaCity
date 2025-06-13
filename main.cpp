@@ -7,13 +7,40 @@
 #include <ctime>
 #include "structGame.cpp"
 
+/*MUDANÇAS REALIZADAS:
+*Acrescentei nivel que influencia na lógica de velocidade dos carros
+*Mudanças na estrtura do jogo agora temos: mapTrash, mapTree, mapCars disvunculando tudo de Lane (Usa menos laços de repetição e espaço sequencial na memoria)
+*Mudei a estrtura da class Player adicionando uma estrtura INVENTARIO que contem quantidade de lixo coletado de cada tipo 
+*Redenrização dos lixos ao longo das ROADS do mapa
+*Definicão de zona de atuação do jogador e zona dos carros
+*Função para detecção de colisão tanto para Tree quanto para Cars -> Quando redefinir os desenho dos objetos precisa ajustar o limite da colisão
+*Sistema de coleta de acordo com as setas
+
+O QUE FALTA:
+*Melhorar a aparencia do jogo
+*Acrescentar linha de chegada + lixeira ao final
+*Implementar Lógica de depositar lixo nas lixeira (calcular Score)
+*Implementar Lógica de "Subir Nivel" + reinicio do mapa de player
+*Implementar Lógica de score ->Acredito que seja interessante colocar algo como score minimo para passar tipo 60% do lixo coletado
+*Implementar menu (controles do jogo) - OPCIONAL PODEMOS COLOCAR ORIENTAÇÃO NO READ.ME
+
+*/
+
 #define WIDTH 600
 #define HEIGHT 900
 #define pass 2.0f
+#define zonaJogador 50 
+#define zonaCarros 80
+#define tamMapa 20
 using namespace std;
+
+int nivel = 1;
 
 Player player(0.0f,5.0f,-5.0f);
 deque<Lane> mapLanes;
+deque<Trash> mapTrash;
+deque<Tree> mapTree;
+deque<Car> mapCars;
 
 void Player::drawPlayer(){
     glPushMatrix();
@@ -24,25 +51,23 @@ void Player::drawPlayer(){
 }
 
 void updateCars(int value){
-    for(Lane &lane : mapLanes){
-        for(Car &carros : lane.carros){
+        for(Car &carros : mapCars){
             if(carros.dir){
-                if(carros.x<-100.0f)
-                    carros.x = 100.0f;
+                if(carros.x<(-1*zonaCarros))
+                    carros.x = zonaCarros;
                 carros.x -= carros.speed;}
             else{
-                if(carros.x>100.0f)
-                    carros.x = -100.0f;
+                if(carros.x>zonaCarros)
+                    carros.x = (-1*zonaCarros);
                 carros.x += carros.speed;}
             
             float dx = fabs(carros.x - player.x);
-            float dz = fabs(lane.z - player.z);
+            float dz = fabs(carros.z - player.z);
             float limite = 1.5f; // Tolerância
 
-            if (dx < limite && dz < limite)
+            if (dx < limite && dz < limite) //Melhorar a detecção de colisão
                 exit(0); //Game Over
         }
-    }
 
     glutPostRedisplay();           // redesenha a tela
     glutTimerFunc(16, updateCars, 0); // chama de novo daqui a 16ms
@@ -57,26 +82,43 @@ void randomLane(int z) {
         lane.type = (rand()%2 == 0) ? ROAD:GRASS;
 
         if(lane.type==ROAD){
-            int qtd = (rand() % 3+1);
-            int dir = (rand()%2);
+            int qtd = (rand() % 3+1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
+            int dir = (rand()%2); //Sorteando direção da ROAD
                 for(int i=0 ;i<qtd; i++){
                     Car car;
                     car.dir = dir;
-                    car.x = car.dir ? 100.0f:-100.0f; // 1 - Esquerda /  0 = Direita
+                    car.x = car.dir ? zonaCarros:(-1*zonaCarros); //Setando extremos dir/esq | 1 - Esquerda /  0 = Direita
                     car.z = lane.z;
                     car.y = player.y;
-                    car.speed = 0.1f + (rand() % 10) / 100.0f;
-                    lane.carros.push_back(car);
+                    car.speed = 0.1f + (rand() % (10*nivel)) / 100.0f; //Aumento de velocidade dos carros de acordo com o nível
+                    mapCars.push_back(car);
+
+                    Trash lixo;
+                    lixo.x = (rand()%(zonaJogador*2 + 1)) - zonaJogador; //Gerando lixo na zona de jogabilidade
+                    lixo.z = lane.z;
+                    lixo.y = player.y;
+                    lixo.collect = false;
+                    int type = (rand()%4 + 1);
+                    switch (type)
+                    { case 1: lixo.type = PAPER; break;
+                    case 2: lixo.type = PLASTIC; break;
+                    case 3: lixo.type = METAL;break;
+                    case 4: lixo.type = GLASS; break;
+                    default: lixo.type = PAPER; break;
+                    }
+                    mapTrash.push_back(lixo);
+
                 }
         }
-        else{
+        else{ //Gerar arvores
             int qtd = rand()%7 + 1;
             for(int i = 0; i<qtd;i++){
-                int pos = (rand() % 121) - 60;
+                int pos = (rand()%(zonaJogador*2 + 1)) - zonaJogador; //Gerando arvores na zona de jogabilidade
                 Tree tree;
                 tree.x = pos;
                 tree.z = lane.z;
-                lane.arvores.push_back(tree);
+                tree.y = player.y;
+                mapTree.push_back(tree);
             }
         }
     }
@@ -86,18 +128,47 @@ void randomLane(int z) {
 void drawInicialMap(){
     int z = 0.0f;
 
-    for(int i = 0; i<20; i++){
+    for(int i = 0; i<tamMapa; i++){
         randomLane(z);
         z += 10.0f;
     }
 
+    //Desenhar lixeiras no final
+    //Desenhar linha de chegada
+
 }
 
-void drawTree(Lane lane){
+void drawTrash(){
+    for(Trash &trash : mapTrash){
+        if(!trash.collect){ //Apenas lixos nao coletados sao redenrizados em cena
+            switch (trash.type)
+            {
+            case PAPER:
+                glColor3f(1.0f,1.0f,1.0f);
+                break;
+            case PLASTIC:
+                glColor3f(1.0f,0.5f,0.5f);
+                break;
+            case METAL:
+                glColor3f(0.5f,0.5f,0.8f);
+                break;
+            case GLASS: 
+                glColor3f(0.5f,1.5f,1.8f);
+                break;
+            }
+            glPushMatrix();
+            glTranslatef(trash.x,trash.y,trash.z);
+            glutSolidCube(1.5f);
+            glPopMatrix();
+        }
+    }
+}
+
+void drawTree(){
     glColor3f(0.0f, 0.78f, 0.28f);
-    for(Tree &tree : lane.arvores){
+    for(Tree &tree : mapTree){
         glPushMatrix();
-        glTranslatef(tree.x,0.0f,tree.z);
+        glTranslatef(tree.x,tree.y,tree.z);
         glutSolidCube(4.0f);
         glPopMatrix();
     }
@@ -116,11 +187,11 @@ void drawGrass(Lane lane){
     glEnd();
     glPopMatrix();
 }
-void drawCar(Lane lane){
-    for(Car &carros : lane.carros){
+void drawCar(){
+    for(Car &carros : mapCars){
         glColor3f(1.0f, 0.0f, 0.0f);
         glPushMatrix();
-        glTranslatef(carros.x, 0.0f, lane.z);
+        glTranslatef(carros.x, carros.y, carros.z);
             glutSolidCube(2.0f);
         glPopMatrix();
     }
@@ -139,16 +210,17 @@ void drawRoad(Lane lane){
     glPopMatrix();
 }
 void drawLane(){
-    for(Lane &lane : mapLanes){
+    for(Lane &lane : mapLanes){ // Desenhar cada terreno e seus objetos
         glDisable(GL_LIGHTING);
         if(lane.type == GRASS){
             drawGrass(lane);
-            drawTree(lane);
+            drawTree();
         }
         else{
             drawRoad(lane);
-            drawCar(lane);
+            drawCar();
         } 
+        drawTrash();
         glEnable(GL_LIGHTING);
     }
 }
@@ -207,44 +279,84 @@ void display() {
 }
 
 void teclado(unsigned char key, int x, int y){
-    switch (key)
-    {
-    case 'w': // Frente (z+)
-        player.z += pass;
-        break;
-    case 's': // Trás (z-)
-        player.z -= pass;
-        break;
-    case 'a': // Esquerda (x-)
-        if (player.x + pass < 100.0f)
-            player.x += pass;
-        break;
-    case 'd': // Direita (x+)
-        if (player.x - pass > -100.0f)
-            player.x -= pass;
-        break;
-    case 'q': // Sair
-        exit(0);
-        break;
-    case 'r': // Reiniciar
-        break;
+    bool go = true;
+    int passX = 0;
+    int passZ = 0;
+    switch (key){ 
+        case 'w': passZ += pass; break;
+        case 's': passZ -= pass; break;
+        case 'a': passX += pass; break;
+        case 'd': passX -= pass; break;
+    } 
+    for(Tree &tree : mapTree){ //Verifica colisão com alguma arvore
+        float dx = fabs((player.x+passX) - tree.x);
+        float dz = fabs((player.z+passZ) - tree.z);
+        float limite = 3.0f;
+        if(dx<limite && dz<limite)
+            go = false;
     }
+    if(go)
+        switch (key)
+        {
+        case 'w': // Frente (z+)
+            player.z += pass;
+            break;
+        case 's': // Trás (z-)
+            player.z -= pass;
+            break;
+        case 'a': // Esquerda (x-)
+            if (player.x + pass < zonaJogador)
+                player.x += pass;
+            break;
+        case 'd': // Direita (x+)
+            if (player.x - pass > (-1*zonaJogador))
+                player.x -= pass;
+            break;
+        case 'q': // Sair
+            exit(0);
+            break;
+        case 'r': // Reiniciar
+            break;
+        }
     glutPostRedisplay();
 }
 
 
 void teclasEspeciais(int key, int x, int y){
-        switch (key)
-        {
-        case GLUT_KEY_DOWN:
-            //Coletar/Deixar lixeira tipo1
-            break;
-        case GLUT_KEY_UP:
-            break;
-        case GLUT_KEY_RIGHT:
-            break;
-        case GLUT_KEY_LEFT:
-            break;
+        for(Trash &trash : mapTrash){
+            if(!trash.collect){//Verifica se tem lixo não coleatdp perto do jogador
+
+                float dz = fabs(player.z - trash.z); 
+                float dx = fabs(player.x - trash.x);
+                float limite = 3.0f;
+
+                if(dz < limite && dx <limite){
+
+                    if(key==GLUT_KEY_UP && trash.type==PAPER){
+                        trash.collect = true;
+                        player.inv.paper++;
+                    }
+                    else{
+                        if(key==GLUT_KEY_DOWN && trash.type==PLASTIC){
+                        trash.collect = true;
+                        player.inv.plastic++;
+                        }
+                        else{
+                            if(key==GLUT_KEY_RIGHT && trash.type==METAL){
+                                trash.collect = true;
+                                player.inv.metal++;
+                            }
+                            else{
+                                if(key==GLUT_KEY_LEFT && trash.type==GLASS){
+                                trash.collect = true;
+                                player.inv.glass++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
         }
         glutPostRedisplay();
 }
