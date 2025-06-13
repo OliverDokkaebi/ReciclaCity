@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "structGame.cpp"
+#include "chicken.cpp"
 
 #define WIDTH 600
 #define HEIGHT 900
@@ -19,7 +20,10 @@ void Player::drawPlayer(){
     glPushMatrix();
     glColor3f(0.5f,0.5f,0.5f);
     glTranslated(player.x,player.y,player.z);
-    glutSolidCube(player.size);
+    glPushMatrix();
+    glScalef(3,3,3);
+    drawChicken();
+    glPopMatrix();
     glPopMatrix();
 }
 
