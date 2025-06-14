@@ -9,6 +9,8 @@
 #include "chicken.cpp"
 #include "bins.cpp"
 #include "garbage.cpp"
+#include "car.h"
+#include "car.cpp"
 
 /*MUDANÇAS REALIZADAS:
 *Acrescentei nivel que influencia na lógica de velocidade dos carros
@@ -101,24 +103,25 @@ void Player::drawPlayer(){
 }
 
 void updateCars(int value){
+        // Atualiza a posição do jogador nas variáveis globais usadas pela classe Car
+        playerX = player.x;
+        playerY = player.y;
+        playerZ = player.z;
+        playerRelativeToGridX = (int)(player.x / 4); 
+        playerRelativeToGridZ = (int)player.z;
+        
         for(Car &carros : mapCars){
-            if(carros.dir){
-                if(carros.x<(-1*zonaCarros))
-                    carros.x = zonaCarros;
-                carros.x -= carros.speed;}
-            else{
-                if(carros.x>zonaCarros)
-                    carros.x = (-1*zonaCarros);
-                carros.x += carros.speed;}
+            // Sincroniza a propriedade direction com dir para garantir compatibilidade
+            carros.direction = carros.dir;
             
-            float dx = fabs(carros.x - player.x);
-            float dz = fabs(carros.z - player.z);
-            float limite = 1.5f; // Tolerância
-
-            if (dx < limite && dz < limite) {//Melhorar a detecção de colisão
+            // Usa o método Update da classe Car
+            carros.Update();
+            
+            // Verifica se o jogador morreu após a atualização
+            if (playerIsDead) {
                 exibirMensagem("GAME OVER");
-                 glutTimerFunc(1000, [](int){ exit(0); }, 0);
-                //Game Over
+                glutTimerFunc(1000, [](int){ exit(0); }, 0);
+                break; // Sai do loop quando detecta colisão
             }
         }
 
@@ -136,15 +139,15 @@ void randomLane(int z) {
 
         if(lane.type==ROAD){
             int qtd = (rand() % (3 + nivel/2) +1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
-            qtdLixoDisponivel += qtd;
-            int dir = (rand()%2); //Sorteando direção da ROAD
+            qtdLixoDisponivel += qtd;            int dir = (rand()%2); //Sorteando direção da ROAD
                 for(int i=0 ;i<qtd; i++){
-                    Car car;
-                    car.dir = dir;
-                    car.x = car.dir ? zonaCarros:(-1*zonaCarros); //Setando extremos dir/esq | 1 - Esquerda /  0 = Direita
-                    car.z = lane.z;
-                    car.y = player.y;
-                    car.speed = 0.1f + (rand() % (10*nivel)) / 100.0f; //Aumento de velocidade dos carros de acordo com o nível
+                    // Inicializa x com base na direção
+                    float initialX = dir ? zonaCarros : (-1*zonaCarros); //Setando extremos dir/esq | 1 - Esquerda /  0 = Direita
+                    // Velocidade baseada no nível
+                    float speed = 0.1f + (rand() % (10*nivel)) / 100.0f;
+                    // Usa o construtor da classe Car
+                    Car car(initialX, lane.z, speed, dir, lane.z);
+                    car.y = player.y; // Define y separadamente
                     mapCars.push_back(car);
 
                     Trash lixo;
@@ -258,11 +261,8 @@ void drawGrass(Lane lane){
 }
 void drawCar(){
     for(Car &carros : mapCars){
-        glColor3f(1.0f, 0.0f, 0.0f);
-        glPushMatrix();
-        glTranslatef(carros.x, carros.y, carros.z);
-            glutSolidCube(2.0f);
-        glPopMatrix();
+        // Chama o método draw da classe Car para desenhar o carro
+        carros.draw();
     }
 }
 void drawRoad(Lane lane){
