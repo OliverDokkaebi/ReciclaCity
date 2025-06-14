@@ -7,6 +7,8 @@
 #include <ctime>
 #include "structGame.cpp"
 #include "chicken.cpp"
+#include "bins.cpp"
+#include "garbage.cpp"
 
 /*MUDANÇAS REALIZADAS:
 *Acrescentei nivel que influencia na lógica de velocidade dos carros
@@ -140,16 +142,12 @@ void drawDump(int z){
         dump.x = pos;
         dump.collect = 1;
         switch (i){ //Setar cores
-        case 1: dump.type = PLASTIC; glColor3f(1.0f,0.0f,0.0f); break; //Plastico - Vermelho
-        case 2: dump.type = PAPER; glColor3f(0.0f,1.0f,0.0f); break; //Papel - Azul Por alfum motivo as cores amarelas e verde estao invertidas
-        case 3: dump.type = GLASS; glColor3f(0.0f,0.0f,1.0f); break; //Vidro - Verde
-        case 4: dump.type = METAL; glColor3f(1.0f,1.0f,0.0f);break; //Metal - Amarelo
+        case 1: dump.type = PLASTIC;drawTrashBin(1.0f, 0.0f, 0.0f, "plastic", dump.x, dump.z); break; //Plastico - Vermelho
+        case 2: dump.type = PAPER;drawTrashBin(0.0f, 0.0f, 1.0f, "paper", dump.x, dump.z); break; //Papel - Azul Por alfum motivo as cores amarelas e verde estao invertidas
+        case 3: dump.type = GLASS;drawTrashBin(0.0f, 1.0f, 0.0f, "glass", dump.x, dump.z); break; //Vidro - Verde
+        case 4: dump.type = METAL;drawTrashBin(1.0f, 1.0f, 0.0f, "metal", dump.x, dump.z); break; //Metal - Amarelo
         }
         mapDump.push_back(dump);
-        glPushMatrix();
-            glTranslatef(dump.x,dump.y,dump.z);
-            glutSolidCube(3.0f);
-        glPopMatrix();
     }
 }
 
@@ -166,24 +164,23 @@ void drawInicialMap(){
 void drawTrash(){
     for(Trash &trash : mapTrash){
         if(!trash.collect){ //Apenas lixos nao coletados sao redenrizados em cena
+            glPushMatrix();
+            glTranslatef(trash.x,trash.y,trash.z);
             switch (trash.type)
             {
             case PAPER:
-                glColor3f(0.0f,1.0f,1.0f);
+                desenharLixoPapel();
                 break;
             case PLASTIC:
-                glColor3f(1.0f,0.0f,0.0f);
+                desenharLixoPlastico();
                 break;
             case METAL:
-                glColor3f(1.0f,1.0f,0.0f);
+                desenharLixoMetal();
                 break;
             case GLASS: 
-                glColor3f(0.0f,0.0f,1.0f);
+                desenharLixoVidro();
                 break;
             }
-            glPushMatrix();
-            glTranslatef(trash.x,trash.y,trash.z);
-            glutSolidCube(1.5f);
             glPopMatrix();
         }
     }
