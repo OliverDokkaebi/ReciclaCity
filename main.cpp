@@ -42,6 +42,7 @@ deque<Lane> mapLanes;
 deque<Trash> mapTrash;
 deque<Tree> mapTree;
 deque<Car> mapCars;
+deque<Trash> mapDump;
 
 void Player::drawPlayer(){
     glPushMatrix();
@@ -129,6 +130,29 @@ void randomLane(int z) {
     mapLanes.push_back(lane);
 }
 
+void drawDump(int z){
+    z += 20.0f; // Espaço
+    float pos = -10.0f;
+    for(int i=1; i<5;i++,pos += 10){
+        Trash dump;
+        dump.y = player.y;
+        dump.z = z;
+        dump.x = pos;
+        dump.collect = 1;
+        switch (i){ //Setar cores
+        case 1: dump.type = PLASTIC; glColor3f(1.0f,0.0f,0.0f); break; //Plastico - Vermelho
+        case 2: dump.type = PAPER; glColor3f(0.0f,1.0f,0.0f); break; //Papel - Azul Por alfum motivo as cores amarelas e verde estao invertidas
+        case 3: dump.type = GLASS; glColor3f(0.0f,0.0f,1.0f); break; //Vidro - Verde
+        case 4: dump.type = METAL; glColor3f(1.0f,1.0f,0.0f);break; //Metal - Amarelo
+        }
+        mapDump.push_back(dump);
+        glPushMatrix();
+            glTranslatef(dump.x,dump.y,dump.z);
+            glutSolidCube(3.0f);
+        glPopMatrix();
+    }
+}
+
 void drawInicialMap(){
     int z = 0.0f;
 
@@ -136,9 +160,6 @@ void drawInicialMap(){
         randomLane(z);
         z += 10.0f;
     }
-
-    //Desenhar lixeiras no final
-    //Desenhar linha de chegada
 
 }
 
@@ -148,16 +169,16 @@ void drawTrash(){
             switch (trash.type)
             {
             case PAPER:
-                glColor3f(1.0f,1.0f,1.0f);
+                glColor3f(0.0f,1.0f,1.0f);
                 break;
             case PLASTIC:
-                glColor3f(1.0f,0.5f,0.5f);
+                glColor3f(1.0f,0.0f,0.0f);
                 break;
             case METAL:
-                glColor3f(0.5f,0.5f,0.8f);
+                glColor3f(1.0f,1.0f,0.0f);
                 break;
             case GLASS: 
-                glColor3f(0.5f,1.5f,1.8f);
+                glColor3f(0.0f,0.0f,1.0f);
                 break;
             }
             glPushMatrix();
@@ -225,8 +246,10 @@ void drawLane(){
             drawCar();
         } 
         drawTrash();
-        glEnable(GL_LIGHTING);
     }
+
+    drawDump(tamMapa*10);
+    glEnable(GL_LIGHTING);
 }
 
 void init() {
@@ -295,8 +318,8 @@ void teclado(unsigned char key, int x, int y){
     for(Tree &tree : mapTree){ //Verifica colisão com alguma arvore
         float dx = fabs((player.x+passX) - tree.x);
         float dz = fabs((player.z+passZ) - tree.z);
-        float limite = 3.0f;
-        if(dx<limite && dz<limite)
+        float limite = 2.0f;
+        if(dx<limite && dz<(limite+1)) // limite + 1 para dar o espaço do bico
             go = false;
     }
     if(go)
@@ -328,12 +351,11 @@ void teclado(unsigned char key, int x, int y){
 
 void teclasEspeciais(int key, int x, int y){
         for(Trash &trash : mapTrash){
-            if(!trash.collect){//Verifica se tem lixo não coleatdp perto do jogador
+            if(!trash.collect){//Verifica se tem lixo não coleatdo perto do jogador
 
                 float dz = fabs(player.z - trash.z); 
                 float dx = fabs(player.x - trash.x);
                 float limite = 3.0f;
-
                 if(dz < limite && dx <limite){
 
                     if(key==GLUT_KEY_UP && trash.type==PAPER){
@@ -362,6 +384,33 @@ void teclasEspeciais(int key, int x, int y){
 
             }
         }
+        for (Trash &dump : mapDump) {
+    float dz = fabs(player.z - dump.z); 
+    float dx = fabs(player.x - dump.x);
+    float limite = 4.0f;
+    if (dx < limite && dz < limite) {
+        switch (dump.type) {
+            case PLASTIC:
+                player.score += (key == GLUT_KEY_DOWN) ? (10 * player.inv.plastic) : (-10 * player.inv.plastic);
+                player.inv.plastic = 0;
+                break;
+            case PAPER: 
+                player.score += (key == GLUT_KEY_UP) ? (10 * player.inv.paper) : (-10 * player.inv.paper); 
+                player.inv.paper = 0; 
+                break;
+            case METAL: 
+                player.score += (key == GLUT_KEY_RIGHT) ? (10 * player.inv.metal) : (-10 * player.inv.metal); 
+                player.inv.metal = 0; 
+                break;
+            case GLASS: 
+                player.score += (key == GLUT_KEY_LEFT) ? (10 * player.inv.glass) : (-10 * player.inv.glass); 
+                player.inv.glass = 0; 
+                break;
+        }
+    }
+}
+        cout<<player.inv.plastic << player.inv.paper << player.inv.metal << player.inv.glass << "\n";
+        cout<<player.score <<"\n";
         glutPostRedisplay();
 }
 
