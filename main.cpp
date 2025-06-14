@@ -38,6 +38,7 @@ O QUE FALTA:
 using namespace std;
 
 int nivel = 1;
+int qtdLixoDisponivel = 0;
 
 Player player(0.0f,5.0f,-5.0f);
 deque<Lane> mapLanes;
@@ -98,6 +99,7 @@ void randomLane(int z) {
 
         if(lane.type==ROAD){
             int qtd = (rand() % (3 + nivel/2) +1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
+            qtdLixoDisponivel += qtd;
             int dir = (rand()%2); //Sorteando direção da ROAD
                 for(int i=0 ;i<qtd; i++){
                     Car car;
@@ -312,12 +314,19 @@ void display() {
     if(player.score >= (nivel*50)){
         cout<<"subir nivel";
         nivel++;
+        qtdLixoDisponivel = 0;
         mapTree.clear();
         mapCars.clear();
         mapTrash.clear();
         mapLanes.clear();
         drawInicialMap();
         player.zerarPlayer();            
+    }
+    else{
+        int aux = player.inv.plastic + player.inv.paper + player.inv.metal + player.inv.glass ;
+        if((((aux+qtdLixoDisponivel)*10)+player.score) < (nivel*50)){ //Se mesmo ao coletar todos os lixos do mapa não for o suficiente para subir de nivel GAME OVER
+            exit(0);
+        }
     }
     drawLane();
     player.drawPlayer();
@@ -379,21 +388,25 @@ void teclasEspeciais(int key, int x, int y){
 
                     if(key==GLUT_KEY_UP && trash.type==PAPER){
                         trash.collect = true;
+                        qtdLixoDisponivel --;
                         player.inv.paper++;
                     }
                     else{
                         if(key==GLUT_KEY_DOWN && trash.type==PLASTIC){
                         trash.collect = true;
+                        qtdLixoDisponivel --;
                         player.inv.plastic++;
                         }
                         else{
                             if(key==GLUT_KEY_RIGHT && trash.type==METAL){
                                 trash.collect = true;
+                                qtdLixoDisponivel --;
                                 player.inv.metal++;
                             }
                             else{
                                 if(key==GLUT_KEY_LEFT && trash.type==GLASS){
                                 trash.collect = true;
+                                qtdLixoDisponivel --;
                                 player.inv.glass++;
                                 }
                             }
