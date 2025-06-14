@@ -40,12 +40,46 @@ using namespace std;
 int nivel = 1;
 int qtdLixoDisponivel = 0;
 
+bool mensagem = false;
+string text;
+time_t tempoInicioMensagem = 0;
+
+
 Player player(0.0f,5.0f,-5.0f);
 deque<Lane> mapLanes;
 deque<Trash> mapTrash;
 deque<Tree> mapTree;
 deque<Car> mapCars;
 deque<Trash> mapDump;
+
+
+void desenharTexto(float yPixel, const std::string& texto, float scale) {
+    // calcula largura total do texto em unidades stroke (sem escala)
+    float largura = 0;
+    for (char c : texto)
+        largura += glutStrokeWidth(GLUT_STROKE_ROMAN, c);
+
+    float xPixel = (WIDTH - largura * scale) / 2.0f;
+
+    glPushMatrix();
+    glTranslatef(xPixel, yPixel, 0);
+    glScalef(scale, scale, 1.0f);
+
+    glColor3f(1.0f, 1.0f, 0.0f);  // amarelo
+
+    for (char c : texto)
+        glutStrokeCharacter(GLUT_STROKE_ROMAN, c);
+
+    glPopMatrix();
+}
+
+
+void exibirMensagem(const std::string& texto){
+    mensagem = true;
+    tempoInicioMensagem = time(0);
+    text = texto;
+    glutPostRedisplay();
+}
 
 void Player::zerarPlayer(){
         this->x = 0.0f;
@@ -81,8 +115,11 @@ void updateCars(int value){
             float dz = fabs(carros.z - player.z);
             float limite = 1.5f; // Tolerância
 
-            if (dx < limite && dz < limite) //Melhorar a detecção de colisão
-                exit(0); //Game Over
+            if (dx < limite && dz < limite) {//Melhorar a detecção de colisão
+                exibirMensagem("GAME OVER");
+                 glutTimerFunc(1000, [](int){ exit(0); }, 0);
+                //Game Over
+            }
         }
 
     glutPostRedisplay();           // redesenha a tela
@@ -311,6 +348,32 @@ void display() {
         player.x, player.y, player.z,     // acomphamento da camera ao jogador
         0.0f, 1.0f, 0.0f      // eixo "para cima"
     );
+
+    if (mensagem){
+    double segundos = difftime(time(0), tempoInicioMensagem);
+    if (segundos < 5) {
+        float alpha = 1.0f - (segundos / 5.0f); 
+
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        desenharTexto(HEIGHT/2, text, 0.5f); // y em pixels
+
+        glPopMatrix();
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+    } else {
+        mensagem = false;
+    }
+    }
+
     if(player.score >= (nivel*50)){
         cout<<"subir nivel";
         nivel++;
@@ -320,11 +383,13 @@ void display() {
         mapTrash.clear();
         mapLanes.clear();
         drawInicialMap();
-        player.zerarPlayer();            
+        player.zerarPlayer(); 
+        exibirMensagem("NEXT LEVEL...");           
     }
     else{
         int aux = player.inv.plastic + player.inv.paper + player.inv.metal + player.inv.glass ;
         if((((aux+qtdLixoDisponivel)*10)+player.score) < (nivel*50)){ //Se mesmo ao coletar todos os lixos do mapa não for o suficiente para subir de nivel GAME OVER
+            exibirMensagem("GAME OVER");
             exit(0);
         }
     }
@@ -441,8 +506,6 @@ void teclasEspeciais(int key, int x, int y){
         }
     }
 }
-        cout<<player.inv.plastic << player.inv.paper << player.inv.metal << player.inv.glass << "\n";
-        cout<<player.score <<"\n";
         glutPostRedisplay();
 }
 
