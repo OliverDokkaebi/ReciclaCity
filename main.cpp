@@ -117,7 +117,7 @@ void updateCars(int value){
 
             if (dx < limite && dz < limite) {//Melhorar a detecção de colisão
                 exibirMensagem("GAME OVER");
-                 glutTimerFunc(1000, [](int){ exit(0); }, 0);
+                glutTimerFunc(1000, [](int){ exit(0); }, 0);
                 //Game Over
             }
         }
@@ -135,16 +135,17 @@ void randomLane(int z) {
         lane.type = (rand()%2 == 0) ? ROAD:GRASS;
 
         if(lane.type==ROAD){
-            int qtd = (rand() % (3 + nivel/2) +1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
+            int qtd = (rand() % (4 + nivel/2) +2); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
             qtdLixoDisponivel += qtd;
             int dir = (rand()%2); //Sorteando direção da ROAD
                 for(int i=0 ;i<qtd; i++){
                     Car car;
                     car.dir = dir;
-                    car.x = car.dir ? zonaCarros:(-1*zonaCarros); //Setando extremos dir/esq | 1 - Esquerda /  0 = Direita
+                    car.x = car.dir ? (zonaCarros + (i*10)):((-1*zonaCarros) - (i*10)) ; //Setando extremos dir/esq | 1 - Esquerda /  0 = Direita
                     car.z = lane.z;
                     car.y = player.y;
-                    car.speed = 0.1f + (rand() % (10*nivel)) / 100.0f; //Aumento de velocidade dos carros de acordo com o nível
+                    car.speed = 0.1f + (rand() % (10*nivel)) / 50.0f; //Aumento de velocidade dos carros de acordo com o nível
+                    car.color = (rand()%4 + 1);
                     mapCars.push_back(car);
 
                     Trash lixo;
@@ -257,12 +258,83 @@ void drawGrass(Lane lane){
     glPopMatrix();
 }
 void drawCar(){
-    for(Car &carros : mapCars){
-        glColor3f(1.0f, 0.0f, 0.0f);
-        glPushMatrix();
-        glTranslatef(carros.x, carros.y, carros.z);
-            glutSolidCube(2.0f);
-        glPopMatrix();
+    for(Car &carros : mapCars){    
+        int facing = carros.dir ?  -1:1;
+
+        glPushMatrix();    
+            switch(carros.color){
+                case 1: glColor3f(0.6f, 0.1f, 0.8f); break;
+                case 2: glColor3f(1.0f, 0.0f, 0.6f); break;
+                case 3: glColor3f(0.0f, 0.8f, 0.9f); break;
+                case 4: glColor3f(1.0f, 0.4f, 0.0f); break;
+            }
+            glTranslatef(carros.x, carros.y-1.25, carros.z);
+            glScaled(2.2, .5, 1);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            // Upper body
+            glPushMatrix();
+            glColor3f(1, 1, 1);
+            glTranslatef(carros.x -(.8*facing), carros.y+.25,carros.z);
+            glScaled(1, .4, .75);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            // Window side
+            glPushMatrix();
+            glColor3f(0, 0, 0);
+            glTranslatef(carros.x-(.8*facing), carros.y-.15,carros.z);
+            glScaled(.5, .25, .751);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            // Window front/back
+            glPushMatrix();
+            glColor3f(0, 0, 0);
+            glTranslatef(carros.x-(.8*facing), carros.y-.15,carros.z);
+            glScaled(1.1, .25, .5);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            // Side mirrors
+            glPushMatrix();
+            glColor3f(0.2, 0.2, 0.2);
+            glTranslatef(carros.x+(.25*facing), carros.y-.75,carros.z);
+            glScaled(.3, .15, 1.25);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            // Wheels front
+            glPushMatrix();
+            glColor3f(0, 0, 0);
+            glTranslatef(carros.x+(2*facing), carros.y-1.6,carros.z);
+            glScaled(.3, .3, 1.1);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            glPushMatrix();
+            glColor3f(1, 1, 1);
+            glTranslatef(carros.x+(2*facing), carros.y-1.6,carros.z);
+            glScaled(.125, .125, 1.11);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            
+            // Wheels back
+            glPushMatrix();
+            glColor3f(0, 0, 0);
+            glTranslatef(carros.x-(2*facing), carros.y-1.6,carros.z);
+            glScaled(.3, .3, 1.1);
+            glutSolidCube(3);
+            glPopMatrix();
+            
+            glPushMatrix();
+            glColor3f(1, 1, 1);
+            glTranslatef(carros.x-(2*facing), carros.y-1.6,carros.z);
+            glScaled(.125, .125, 1.11);
+            glutSolidCube(3);
+            glPopMatrix();
     }
 }
 void drawRoad(Lane lane){

@@ -30,6 +30,7 @@ public:
     float x, y, z;
     float speed;
     int dir;         // 1 para direita, 0 para esquerda
+    int color;
 };
 
 class Tree{
