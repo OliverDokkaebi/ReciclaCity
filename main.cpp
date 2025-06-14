@@ -46,6 +46,14 @@ deque<Tree> mapTree;
 deque<Car> mapCars;
 deque<Trash> mapDump;
 
+void Player::zerarPlayer(){
+        this->x = 0.0f;
+        this->z = -5.0f;
+        this->size = 2.0f;
+        this->score = 0;
+        this->inv.paper = this->inv.plastic = this->inv.metal = this->inv.glass = 0;
+}
+
 void Player::drawPlayer(){
     glPushMatrix();
     glColor3f(0.5f,0.5f,0.5f);
@@ -89,7 +97,7 @@ void randomLane(int z) {
         lane.type = (rand()%2 == 0) ? ROAD:GRASS;
 
         if(lane.type==ROAD){
-            int qtd = (rand() % 3+1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
+            int qtd = (rand() % (3 + nivel/2) +1); //OPCIONAL: Implementar nivel para aumentar a quantidade de carros não sei se poderia causar algum impacto na memória
             int dir = (rand()%2); //Sorteando direção da ROAD
                 for(int i=0 ;i<qtd; i++){
                     Car car;
@@ -249,6 +257,10 @@ void drawLane(){
     glEnable(GL_LIGHTING);
 }
 
+void updateNivel(){
+
+}
+
 void init() {
     // Ativa o teste de profundidade
     glEnable(GL_DEPTH_TEST);
@@ -297,6 +309,16 @@ void display() {
         player.x, player.y, player.z,     // acomphamento da camera ao jogador
         0.0f, 1.0f, 0.0f      // eixo "para cima"
     );
+    if(player.score >= (nivel*50)){
+        cout<<"subir nivel";
+        nivel++;
+        mapTree.clear();
+        mapCars.clear();
+        mapTrash.clear();
+        mapLanes.clear();
+        drawInicialMap();
+        player.zerarPlayer();            
+    }
     drawLane();
     player.drawPlayer();
     glutSwapBuffers();

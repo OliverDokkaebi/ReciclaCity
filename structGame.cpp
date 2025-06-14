@@ -22,6 +22,7 @@ public:
         this->inv.paper = this->inv.plastic = this->inv.metal = this->inv.glass = 0;
     }
     void drawPlayer();   
+    void zerarPlayer();
 };
 
 class Car {
