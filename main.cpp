@@ -39,6 +39,10 @@ O QUE FALTA:
 #define tamMapa 20
 using namespace std;
 
+int screenWidth = WIDTH;
+int screenHeight = HEIGHT;
+
+
 int nivel = 1;
 int qtdLixoDisponivel = 0;
 
@@ -339,7 +343,7 @@ void display() {
     // Configura a câmera aqui
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, (float)WIDTH / (float)HEIGHT, 1.0, 1000.0);
+    gluPerspective(60.0, (float)screenWidth / (float)screenHeight, 1.0, 1000.0);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -509,6 +513,23 @@ void teclasEspeciais(int key, int x, int y){
         glutPostRedisplay();
 }
 
+void reshape(int w, int h) {
+    if (h == 0) h = 1; // Evita divisão por zero
+    float aspect = (float)w / (float)h;
+    screenWidth = w;
+    screenHeight = h;
+
+    glViewport(0, 0, w, h); // Ajusta o viewport para o novo tamanho da janela
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(60.0, aspect, 1.0, 1000.0); // Ajusta o aspect ratio
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -516,6 +537,7 @@ int main(int argc, char** argv) {
     glutCreateWindow("Crossy Road");
     init();
     glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
     glutKeyboardFunc(teclado);
     glutSpecialFunc(teclasEspeciais);
     glutTimerFunc(0, updateCars, 0); // inicia animação imediatamente
