@@ -52,6 +52,35 @@ deque<Tree> mapTree;
 deque<Car> mapCars;
 deque<Trash> mapDump;
 
+// Dimensões da Janela (agora variáveis globais)
+int windowWidth = 600;
+int windowHeight = 900;
+
+// Estados do Jogo
+enum GameState {
+    MENU,
+    PLAYING,
+    PAUSED
+};
+GameState currentGameState = MENU;
+
+// Dimensões e posições dos botões do menu
+#define BUTTON_WIDTH 200
+#define BUTTON_HEIGHT 50
+
+// Dimensões e posições dos botões do menu de pausa
+#define PAUSE_CONTINUE_BUTTON_Y (windowHeight / 2 + BUTTON_HEIGHT / 2 + 10)
+#define PAUSE_RESTART_BUTTON_Y (windowHeight / 2 - BUTTON_HEIGHT / 2)
+#define PAUSE_EXIT_BUTTON_Y (windowHeight / 2 - BUTTON_HEIGHT * 1.5 - 10)
+
+// Protótipos de funções relacionadas ao menu
+void drawMenu();
+void drawPauseMenu();
+void mouseClick(int button, int state, int x, int y);
+void startGame();
+void reshape(int w, int h);
+void drawButton(float x, float y, float width, float height, const char* label);
+
 
 void desenharTexto(float yPixel, const std::string& texto, float scale) {
     // calcula largura total do texto em unidades stroke (sem escala)
@@ -59,7 +88,7 @@ void desenharTexto(float yPixel, const std::string& texto, float scale) {
     for (char c : texto)
         largura += glutStrokeWidth(GLUT_STROKE_ROMAN, c);
 
-    float xPixel = (WIDTH - largura * scale) / 2.0f;
+    float xPixel = (windowWidth - largura * scale) / 2.0f; // Usa windowWidth em vez de WIDTH
 
     glPushMatrix();
     glTranslatef(xPixel, yPixel, 0);
@@ -396,81 +425,107 @@ void init() {
 
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);    glClearColor(0.38f, 0.78f, 0.28f, 1.0f);
 
-    glClearColor(0.38f, 0.78f, 0.28f, 1.0f);
-
-    // Gera o mapa inicial
-    drawInicialMap();
+    // Registra a função de callback do mouse
+    glutMouseFunc(mouseClick);
 }
 
 
 void display() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (currentGameState == MENU) {
+        drawMenu();
+    } else if (currentGameState == PLAYING || currentGameState == PAUSED) { 
+        glViewport(0, 0, (GLsizei)windowWidth, (GLsizei)windowHeight); 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Configura a câmera aqui
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(60.0, (float)WIDTH / (float)HEIGHT, 1.0, 1000.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(
-        player.x-10.0f, player.y + 35.0f, player.z-20.0f,  // posição da câmera em relação ao jogador
-        player.x, player.y, player.z,     // acomphamento da camera ao jogador
-        0.0f, 1.0f, 0.0f      // eixo "para cima"
-    );
-
-    if (mensagem){
-    double segundos = difftime(time(0), tempoInicioMensagem);
-    if (segundos < 5) {
-        float alpha = 1.0f - (segundos / 5.0f); 
-
+        // Configura a câmera para o jogo
         glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
         glLoadIdentity();
-        gluOrtho2D(0, WIDTH, 0, HEIGHT);
+        gluPerspective(60.0, (float)windowWidth / (float)windowHeight, 1.0, 1000.0); 
 
         glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
         glLoadIdentity();
+        gluLookAt(
+            player.x-10.0f, player.y + 35.0f, player.z-20.0f,  
+            player.x, player.y, player.z,     
+            0.0f, 1.0f, 0.0f      
+        );
 
-        desenharTexto(HEIGHT/2, text, 0.5f); // y em pixels
+        if (mensagem){
+            double segundos = difftime(time(0), tempoInicioMensagem);
+            if (segundos < 5) {
+                float alpha = 1.0f - (segundos / 5.0f); 
 
-        glPopMatrix();
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-    } else {
-        mensagem = false;
-    }
-    }
+                glMatrixMode(GL_PROJECTION);
+                glPushMatrix();
+                glLoadIdentity();
+                gluOrtho2D(0, windowWidth, 0, windowHeight);
 
-    if(player.score >= (nivel*50)){
-        cout<<"subir nivel";
-        nivel++;
-        qtdLixoDisponivel = 0;
-        mapTree.clear();
-        mapCars.clear();
-        mapTrash.clear();
-        mapLanes.clear();
-        drawInicialMap();
-        player.zerarPlayer(); 
-        exibirMensagem("NEXT LEVEL...");           
-    }
-    else{
-        int aux = player.inv.plastic + player.inv.paper + player.inv.metal + player.inv.glass ;
-        if((((aux+qtdLixoDisponivel)*10)+player.score) < (nivel*50)){ //Se mesmo ao coletar todos os lixos do mapa não for o suficiente para subir de nivel GAME OVER
-            exibirMensagem("GAME OVER");
-            exit(0);
+                glMatrixMode(GL_MODELVIEW);
+                glPushMatrix();
+                glLoadIdentity();
+
+                desenharTexto(windowHeight/2, text, 0.5f);
+
+                glPopMatrix();
+                glMatrixMode(GL_PROJECTION);
+                glPopMatrix();
+                glMatrixMode(GL_MODELVIEW);
+            } else {
+                mensagem = false;
+            }
         }
-    }
-    drawLane();
-    player.drawPlayer();
-    glutSwapBuffers();
+
+        if(player.score >= (nivel*50)){
+            cout<<"subir nivel";
+            nivel++;
+            qtdLixoDisponivel = 0;
+            mapTree.clear();
+            mapCars.clear();
+            mapTrash.clear();
+            mapLanes.clear();
+            drawInicialMap();
+            player.zerarPlayer(); 
+            exibirMensagem("NEXT LEVEL...");           
+        }
+        else{
+            int aux = player.inv.plastic + player.inv.paper + player.inv.metal + player.inv.glass ;
+            if((((aux+qtdLixoDisponivel)*10)+player.score) < (nivel*50)){
+                exibirMensagem("GAME OVER");
+                exit(0);
+            }
+        }
+        
+        drawLane();
+        player.drawPlayer();
+
+        if (currentGameState == PAUSED) { 
+            drawPauseMenu();
+        }
+
+        glutSwapBuffers();
+    } 
 }
 
 void teclado(unsigned char key, int x, int y){
+    if (key == 27) { // Tecla ESC
+        if (currentGameState == PLAYING) {
+            currentGameState = PAUSED;
+            glutPostRedisplay();
+            return;
+        } else if (currentGameState == PAUSED) {
+            currentGameState = PLAYING;
+            glutTimerFunc(16, updateCars, 0);
+            glutPostRedisplay();
+            return;
+        }
+    }
+
+    if (currentGameState != PLAYING) {
+        return; 
+    }
+
     bool go = true;
     int passX = 0;
     int passZ = 0;
@@ -515,81 +570,281 @@ void teclado(unsigned char key, int x, int y){
 
 
 void teclasEspeciais(int key, int x, int y){
-        for(Trash &trash : mapTrash){
-            if(!trash.collect){//Verifica se tem lixo não coleatdo perto do jogador
+    if (currentGameState != PLAYING) {
+        return; 
+    }
+    
+    for(Trash &trash : mapTrash){
+        if(!trash.collect){//Verifica se tem lixo não coleatdo perto do jogador
 
-                float dz = fabs(player.z - trash.z); 
-                float dx = fabs(player.x - trash.x);
-                float limite = 3.0f;
-                if(dz < limite && dx <limite){
+            float dz = fabs(player.z - trash.z); 
+            float dx = fabs(player.x - trash.x);
+            float limite = 3.0f;
+            if(dz < limite && dx <limite){
 
-                    if(key==GLUT_KEY_UP && trash.type==PAPER){
-                        trash.collect = true;
-                        qtdLixoDisponivel --;
-                        player.inv.paper++;
+                if(key==GLUT_KEY_UP && trash.type==PAPER){
+                    trash.collect = true;
+                    qtdLixoDisponivel --;
+                    player.inv.paper++;
+                }
+                else{
+                    if(key==GLUT_KEY_DOWN && trash.type==PLASTIC){
+                    trash.collect = true;
+                    qtdLixoDisponivel --;
+                    player.inv.plastic++;
                     }
                     else{
-                        if(key==GLUT_KEY_DOWN && trash.type==PLASTIC){
-                        trash.collect = true;
-                        qtdLixoDisponivel --;
-                        player.inv.plastic++;
+                        if(key==GLUT_KEY_RIGHT && trash.type==METAL){
+                            trash.collect = true;
+                            qtdLixoDisponivel --;
+                            player.inv.metal++;
                         }
                         else{
-                            if(key==GLUT_KEY_RIGHT && trash.type==METAL){
-                                trash.collect = true;
-                                qtdLixoDisponivel --;
-                                player.inv.metal++;
-                            }
-                            else{
-                                if(key==GLUT_KEY_LEFT && trash.type==GLASS){
-                                trash.collect = true;
-                                qtdLixoDisponivel --;
-                                player.inv.glass++;
-                                }
+                            if(key==GLUT_KEY_LEFT && trash.type==GLASS){
+                            trash.collect = true;
+                            qtdLixoDisponivel --;
+                            player.inv.glass++;
                             }
                         }
                     }
                 }
+            }
 
+        }
+    }
+    for (Trash &dump : mapDump) {
+        float dz = fabs(player.z - dump.z); 
+        float dx = fabs(player.x - dump.x);
+        float limite = 4.0f;
+        if (dx < limite && dz < limite) {
+            switch (dump.type) {
+                case PLASTIC:
+                    player.score += (key == GLUT_KEY_DOWN) ? (10 * player.inv.plastic) : (-10 * player.inv.plastic);
+                    player.inv.plastic = 0;
+                    break;
+                case PAPER: 
+                    player.score += (key == GLUT_KEY_UP) ? (10 * player.inv.paper) : (-10 * player.inv.paper); 
+                    player.inv.paper = 0; 
+                    break;
+                case METAL: 
+                    player.score += (key == GLUT_KEY_RIGHT) ? (10 * player.inv.metal) : (-10 * player.inv.metal); 
+                    player.inv.metal = 0; 
+                    break;
+                case GLASS: 
+                    player.score += (key == GLUT_KEY_LEFT) ? (10 * player.inv.glass) : (-10 * player.inv.glass); 
+                    player.inv.glass = 0; 
+                    break;
             }
         }
-        for (Trash &dump : mapDump) {
-    float dz = fabs(player.z - dump.z); 
-    float dx = fabs(player.x - dump.x);
-    float limite = 4.0f;
-    if (dx < limite && dz < limite) {
-        switch (dump.type) {
-            case PLASTIC:
-                player.score += (key == GLUT_KEY_DOWN) ? (10 * player.inv.plastic) : (-10 * player.inv.plastic);
-                player.inv.plastic = 0;
-                break;
-            case PAPER: 
-                player.score += (key == GLUT_KEY_UP) ? (10 * player.inv.paper) : (-10 * player.inv.paper); 
-                player.inv.paper = 0; 
-                break;
-            case METAL: 
-                player.score += (key == GLUT_KEY_RIGHT) ? (10 * player.inv.metal) : (-10 * player.inv.metal); 
-                player.inv.metal = 0; 
-                break;
-            case GLASS: 
-                player.score += (key == GLUT_KEY_LEFT) ? (10 * player.inv.glass) : (-10 * player.inv.glass); 
-                player.inv.glass = 0; 
-                break;
+    }
+    glutPostRedisplay();
+}
+
+// Função para desenhar os botões (usada por ambos os menus)
+void drawButton(float x, float y, float width, float height, const char* label) {
+    // Desenha o retângulo do botão
+    glColor3f(0.7f, 0.7f, 0.7f); // Cor cinza para o botão
+    glBegin(GL_QUADS);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+
+    // Desenha a borda do botão
+    glColor3f(0.3f, 0.3f, 0.3f); // Cor cinza escuro para a borda
+    glLineWidth(2.0);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(x, y);
+    glVertex2f(x + width, y);
+    glVertex2f(x + width, y + height);
+    glVertex2f(x, y + height);
+    glEnd();
+
+    // Desenha o texto do botão
+    float textWidth = 0;
+    for (const char* c = label; *c; ++c) {
+        textWidth += glutStrokeWidth(GLUT_STROKE_ROMAN, *c);
+    }
+    textWidth *= 0.15f; 
+
+    float textX = x + (width - textWidth) / 2;
+    float textY = y + (height - 20) / 2 + 5; 
+
+    glPushMatrix();
+    glTranslatef(textX, textY, 0.1f); 
+    glScalef(0.15f, 0.15f, 1.0f); 
+    glColor3f(0.0f, 0.0f, 0.0f); 
+    glLineWidth(1.0f); 
+    for (const char* c = label; *c; ++c) {
+        glutStrokeCharacter(GLUT_STROKE_ROMAN, *c);
+    }
+    glPopMatrix();
+}
+
+// Função para desenhar o menu de pausa
+void drawPauseMenu() {
+    // Configura para desenho 2D
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, windowWidth, 0, windowHeight);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Desenha um retângulo semitransparente por cima da tela
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(0.0f, 0.0f, 0.0f, 0.5f); // Preto com 50% de transparência
+    glBegin(GL_QUADS);
+    glVertex2f(0, 0);
+    glVertex2f(windowWidth, 0);
+    glVertex2f(windowWidth, windowHeight);
+    glVertex2f(0, windowHeight);
+    glEnd();
+    glDisable(GL_BLEND);
+
+    // Desenha o título "Pausado"
+    desenharTexto(windowHeight - 150, "Pausado", 0.7f);
+
+    // Desenha os botões
+    float buttonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+    drawButton(buttonX, PAUSE_CONTINUE_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "Continuar");
+    drawButton(buttonX, PAUSE_RESTART_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "Reiniciar");
+    drawButton(buttonX, PAUSE_EXIT_BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "Sair");
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
+// Função para desenhar o menu inicial
+void drawMenu() {
+    glViewport(0, 0, (GLsizei)windowWidth, (GLsizei)windowHeight); 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+    // Configura a projeção para 2D (ortográfica) para o menu
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, windowWidth, 0, windowHeight); 
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Desenha o título
+    desenharTexto(windowHeight - 150, "ReciclaCity", 0.7f); 
+
+    // Desenha os botões (posições relativas ao centro da windowWidth/windowHeight)
+    float startButtonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+    float startButtonY = (windowHeight / 2.0f - 25.0f);
+    float exitMenuButtonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+    float exitMenuButtonY = (windowHeight / 2.0f - BUTTON_HEIGHT - 45.0f);
+
+    drawButton(startButtonX, startButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, "Iniciar");
+    drawButton(exitMenuButtonX, exitMenuButtonY, BUTTON_WIDTH, BUTTON_HEIGHT, "Sair");
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW); 
+
+    glutSwapBuffers();
+}
+
+// Função para iniciar/reiniciar o jogo
+void startGame() {
+    currentGameState = PLAYING;
+    nivel = 1; 
+    qtdLixoDisponivel = 0;
+    player.zerarPlayer(); 
+
+    mapLanes.clear();
+    mapTrash.clear();
+    mapTree.clear();
+    mapCars.clear();
+    mapDump.clear();
+
+    drawInicialMap(); 
+    if (currentGameState == PLAYING) {
+      glutTimerFunc(16, updateCars, 0); 
+    }
+    glutPostRedisplay();
+}
+
+// Função de callback para cliques do mouse
+void mouseClick(int button, int state, int x, int y) {
+    if (currentGameState == MENU && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        int invertedY = windowHeight - y; 
+
+        float startButtonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+        float startButtonY = (windowHeight / 2.0f - 25.0f);
+        float exitMenuButtonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+        float exitMenuButtonY = (windowHeight / 2.0f - BUTTON_HEIGHT - 45.0f);
+
+        if (x >= startButtonX && x <= startButtonX + BUTTON_WIDTH &&
+            invertedY >= startButtonY && invertedY <= startButtonY + BUTTON_HEIGHT) {
+            startGame();
+        }
+        else if (x >= exitMenuButtonX && x <= exitMenuButtonX + BUTTON_WIDTH &&
+                 invertedY >= exitMenuButtonY && invertedY <= exitMenuButtonY + BUTTON_HEIGHT) {
+            exit(0);
+        }
+    } else if (currentGameState == PAUSED && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        int invertedY = windowHeight - y;
+        float buttonX = (windowWidth / 2.0f - BUTTON_WIDTH / 2.0f);
+
+        if (x >= buttonX && x <= buttonX + BUTTON_WIDTH &&
+            invertedY >= PAUSE_CONTINUE_BUTTON_Y && invertedY <= PAUSE_CONTINUE_BUTTON_Y + BUTTON_HEIGHT) {
+            currentGameState = PLAYING;
+            glutTimerFunc(16, updateCars, 0);
+            glutPostRedisplay();
+        }
+        else if (x >= buttonX && x <= buttonX + BUTTON_WIDTH &&
+                 invertedY >= PAUSE_RESTART_BUTTON_Y && invertedY <= PAUSE_RESTART_BUTTON_Y + BUTTON_HEIGHT) {
+            startGame(); 
+        }
+        else if (x >= buttonX && x <= buttonX + BUTTON_WIDTH &&
+                 invertedY >= PAUSE_EXIT_BUTTON_Y && invertedY <= PAUSE_EXIT_BUTTON_Y + BUTTON_HEIGHT) {
+            exit(0);
         }
     }
 }
-        glutPostRedisplay();
+
+// Função de callback para redimensionamento da janela
+void reshape(int w, int h) {
+    windowWidth = w;
+    windowHeight = h;
+    glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+
+    if (currentGameState == MENU || currentGameState == PAUSED) {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluOrtho2D(0, w, 0, h);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
+    glutPostRedisplay(); 
 }
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(WIDTH, HEIGHT);
-    glutCreateWindow("Crossy Road");
+    glutInitWindowSize(windowWidth, windowHeight);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("ReciclaCity");
+    
     init();
+    
     glutDisplayFunc(display);
     glutKeyboardFunc(teclado);
+    glutReshapeFunc(reshape);
     glutSpecialFunc(teclasEspeciais);
-    glutTimerFunc(0, updateCars, 0); // inicia animação imediatamente
+    
     glutMainLoop();
+    return 0;
 }
