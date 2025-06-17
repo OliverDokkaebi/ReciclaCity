@@ -1,0 +1,2 @@
+COMANDO PARA GERAR EXECUTÁVEL: g++ main.cpp lanes.cpp cars.cpp bins.cpp garbage.cpp tree.cpp player.cpp game_utils.cpp -o jogo.exe -I./include -L./lib -lfreeglut -lopengl32 -lglu32
+ARQUIVO EXECUTÁVEL: ./jogo.exe
