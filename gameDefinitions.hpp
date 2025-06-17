@@ -18,6 +18,7 @@
 #define zonaCarros 80
 #define tamMapa 20
 
+
 // --- Variáveis Globais (Declaradas com 'extern') ---
 extern int screenWidth;
 extern int screenHeight;
@@ -40,3 +41,13 @@ extern std::deque<Trash> mapTrash;
 extern std::deque<Tree> mapTree;
 extern std::deque<Car> mapCars;
 extern std::deque<Trash> mapDump;
+
+
+// Dimensões e posições dos botões do menu
+#define BUTTON_WIDTH 200
+#define BUTTON_HEIGHT 50
+
+// Dimensões e posições dos botões do menu de pausa
+#define PAUSE_CONTINUE_BUTTON_Y (screenHeight / 2 + BUTTON_HEIGHT / 2 + 10)
+#define PAUSE_RESTART_BUTTON_Y (screenHeight / 2 - BUTTON_HEIGHT / 2)
+#define PAUSE_EXIT_BUTTON_Y (screenHeight / 2 - BUTTON_HEIGHT * 1.5 - 10)
